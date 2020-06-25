@@ -14,23 +14,38 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-import unittest
 
-import pytest
+from mock import patch
 
 from airflow.www import app
 
+MOCK_CONF = {
+    'test': {
+        'hello': ('world', 'default'),
+    },
+}
 
-class TestGetConfig(unittest.TestCase):
+
+@patch('airflow.api_connexion.endpoints.config_endpoint.conf.as_dict', return_value=MOCK_CONF)
+class TestGetConfig:
     @classmethod
-    def setUpClass(cls) -> None:
-        super().setUpClass()
+    def setup_class(cls) -> None:
         cls.app = app.create_app(testing=True)  # type:ignore
 
-    def setUp(self) -> None:
+    def setup_method(self) -> None:
         self.client = self.app.test_client()  # type:ignore
 
-    @pytest.mark.skip(reason="Not implemented yet")
-    def test_should_response_200(self):
+    def test_should_response_200(self, monkeypatch):
         response = self.client.get("/api/v1/config")
         assert response.status_code == 200
+        expected = {
+            'sections': [
+                {
+                    'name': 'test',
+                    'options': [
+                        {'key': 'hello', 'value': 'world', 'source': 'default'},
+                    ]
+                },
+            ]
+        }
+        assert response.json == expected
